@@ -1,53 +1,50 @@
 #!/usr/bin/node
-
+/**
+ * Prints all characters of a Star Wars movie.
+ */
+const process = require('process');
 const request = require('request');
 
+if (process.argv.length !== 3) {
+  throw new Error('Usage: ./0-starwars_characters.js <movie id>');
+}
 const movieId = process.argv[2];
-const filmEndPoint = 'https://swapi-api.hbtn.io/api/films/' + movieId;
-let people = [];
-const names = [];
 
-const requestCharacters = async () => {
-  await new Promise(resolve => request(filmEndPoint, (err, res, body) => {
-    if (err || res.statusCode !== 200) {
-      console.error('Error: ', err, '| StatusCode: ', res.statusCode);
-    } else {
-      const jsonBody = JSON.parse(body);
-      people = jsonBody.characters;
-      resolve();
+function characterData (url) {
+  return new Promise((resolve, reject) => {
+    request(url, (error, response, body) => {
+      if (error) {
+        reject(error);
+      } else if (response.statusCode !== 200) {
+        reject(new Error(`HTTP Error! Status: ${response.statusCode}`));
+      } else {
+        body = JSON.parse(body);
+        console.log(body.name);
+        resolve();
+      }
+    });
+  });
+}
+
+async function getCharacters (url) {
+  request(url, async (error, response, body) => {
+    if (error) {
+      console.log(error);
+      return;
     }
-  }));
-};
-
-const requestNames = async () => {
-  if (people.length > 0) {
-    for (const p of people) {
-      await new Promise(resolve => request(p, (err, res, body) => {
-        if (err || res.statusCode !== 200) {
-          console.error('Error: ', err, '| StatusCode: ', res.statusCode);
-        } else {
-          const jsonBody = JSON.parse(body);
-          names.push(jsonBody.name);
-          resolve();
-        }
-      }));
+    if (response.statusCode !== 200) {
+      throw new Error(`HTTP Error: ${response.statusCode}`);
     }
-  } else {
-    console.error('Error: Got no Characters for some reason');
-  }
-};
-
-const getCharNames = async () => {
-  await requestCharacters();
-  await requestNames();
-
-  for (const n of names) {
-    if (n === names[names.length - 1]) {
-      process.stdout.write(n);
-    } else {
-      process.stdout.write(n + '\n');
+    body = JSON.parse(body);
+    const characters = body.characters;
+    for (const url of characters) {
+      try {
+        await characterData(url);
+      } catch (error) {
+        console.log(error);
+      }
     }
-  }
-};
+  });
+}
 
-getCharNames();
+getCharacters(`https://swapi-api.alx-tools.com/api/films/${movieId}/`);
